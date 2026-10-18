@@ -66,6 +66,12 @@ function nadi(c,s,strength=1){
 }
 export function drawScene(c,s,assets={}){
  c.save();c.clearRect(0,0,WIDTH,HEIGHT);landscape(c,s.time);
+ if(s.phase==='prologue'){
+  c.save();c.translate(36,205);c.scale(.85,.85);
+  effigy(c,s,false,assets.body);
+  for(const h of s.heads){const p=s.position(h);mask(c,h,p,s.time,false,assets.heads);}
+  c.restore();
+ }
  if(['home','charge'].includes(s.phase)){
   glow(c,230,600,170,'#d7a65622');sprite(c,assets.archer,85,315,300,341);
   if(s.phase==='charge'){

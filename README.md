@@ -14,10 +14,10 @@
 
 ## 素材说明
 
-小Bolo 为 Nirmala 空中花园原创角色。项目方提供《Bouncing Adventure2》和《2026十胜节游戏冥想音乐2》；音乐衔接包含淡入淡出。字体为 Noto Sans CJK SC Bold 子集，采用 SIL Open Font License 1.1。
+小Bolo 为 Nirmala 空中花园原创角色。项目方提供《Bouncing Adventure2》和《十胜节自觉音频完整合成》；音乐衔接包含淡入淡出。字体为 Noto Sans CJK SC Bold 子集，采用 SIL Open Font License 1.1。
 
 保留的塔布拉鼓素材：Mayank Bedekar / EdHanleyTabla，CC BY 3.0，https://commons.wikimedia.org/wiki/File:Tabla_Solo,_Mayank_Bedekar.webm 。该素材未用于当前版本的播放流程。
 
 故事来源与改编说明见游戏内“故事 · 音乐 · 致谢”。
 
-本次导出依据已发布的第9版。
+本次更新同步已在 itch.io 测试通过的中英双语版本，包含更新后的开场、完整冥想引导音频和联系邮箱。

@@ -1,0 +1,31 @@
+name: Assemble tested Bolo release
+on:
+  push:
+    branches: [bolo-release-20261019]
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore and verify original audio
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          parts = sorted(Path('.release-parts').glob('part-*'))
+          assert len(parts) == 21
+          data = b''.join(p.read_bytes() for p in parts)
+          assert len(data) == 6060667
+          Path('assets/meditation-zh-guided-20261018.mp3').write_bytes(data)
+          PY
+          test "$(git hash-object assets/meditation-zh-guided-20261018.mp3)" = "d419c24dba129b5dca6743370c7b8a4de8ca428d"
+      - name: Commit complete release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r .release-parts
+          git rm .github/workflows/assemble-bolo.yml
+          git add assets/meditation-zh-guided-20261018.mp3
+          git commit -m "Restore verified original meditation audio and remove transfer files"
+          git push origin HEAD:bolo-release-20261019

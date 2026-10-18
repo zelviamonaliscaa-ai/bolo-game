@@ -17,8 +17,8 @@ export function segmentDistance(px,py,ax,ay,bx,by) {
  return Math.hypot(px-ax-u*dx,py-ay-u*dy);
 }
 export class Game {
- constructor(){this.reset();}
- reset(){this.phase='home';this.phaseTime=0;this.time=0;this.elapsed=0;this.energy=100;this.heads=TARGETS.map((v,i)=>({i,hp:i<3?2:3,max:i<3?2:3,down:false,flash:0}));this.arrows=[];this.particles=[];this.hitCount=0;this.shots=0;this.lastShot=-5;this.aim=null;this.recharge=false;this.feedback=null;this.feedbackTime=0;this.paused=false;this.easy=false;this.events=[];}
+ constructor(){this.meditationDuration=252.48;this.meditationAudioActive=false;this.reset();}
+ reset(){this.meditationAudioActive=false;this.phase='home';this.phaseTime=0;this.time=0;this.elapsed=0;this.energy=100;this.heads=TARGETS.map((v,i)=>({i,hp:i<3?2:3,max:i<3?2:3,down:false,flash:0}));this.arrows=[];this.particles=[];this.hitCount=0;this.shots=0;this.lastShot=-5;this.aim=null;this.recharge=false;this.feedback=null;this.feedbackTime=0;this.paused=false;this.easy=false;this.events=[];}
  enter(phase){this.phase=phase;this.phaseTime=0;this.aim=null;this.events.push({type:'phase',phase});}
  start(){this.reset();this.enter('charge');}
  get cleared(){return this.heads.filter(h=>h.down).length;}
@@ -39,7 +39,7 @@ export class Game {
   if(this.phase==='burn'&&this.phaseTime>=7)this.enter('grow');
   if(this.phase==='grow'&&this.phaseTime>=16)this.enter('prayer');
   if(this.phase==='prayer'&&this.phaseTime>=5)this.enter('cosmos');
-  if(this.phase==='cosmos'&&this.phaseTime>=231.48)this.enter('done');
+  if(this.phase==='cosmos'&&this.phaseTime>=Math.max(0,this.meditationDuration-21)&&!this.meditationAudioActive)this.enter('done');
   if(this.phase==='play'){
    this.elapsed+=dt;this.energy=Math.min(100,this.energy+dt*(this.recharge?22:6));
    this.feedbackTime=Math.max(0,this.feedbackTime-dt);if(!this.feedbackTime&&this.cleared===10){this.enter('burn');this.arrows=[];}
