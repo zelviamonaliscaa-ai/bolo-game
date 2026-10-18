@@ -1,3 +1,4 @@
+import {AudioPlayback} from './audio-playback.js?v=20261019-audio-recovery';
 import {wireWelcome} from './welcome.js';
 import {STORY} from './story.js';
 import {AUDIO} from './media.js?v=20261018-shared';
@@ -9,9 +10,10 @@ const meditation=AUDIO.meditation.zh;game.meditationDuration=meditation.duration
 const story=STORY.zh;let storyIndex=0,storyClock=0,storyComplete=false,storySound=false;
 let loading=false,queuedStart=false,welcomeStartedAt=0,deferredStarted=false,introAssetsStarted=false,sceneWaiting=false;
 let loaded=false,loadFailed=false,last=0,lastPhase='',toastUntil=0,muted=true,musicTrack=null,autoPaused=false;
-const music=new Audio();music.preload='none';music.src=AUDIO.adventure;music.volume=.8;music.setAttribute('playsinline','');let playPending=false,audioBlocked=false,fadeContext=null,fadeGain=null;
+const music=new Audio();music.preload='none';music.src=AUDIO.adventure;music.volume=.8;music.setAttribute('playsinline','');let fadeContext=null,fadeGain=null;
+const playback=new AudioPlayback(music,reason=>{toast(reason==='permission'?'点右上角“音”开启音乐':'音乐加载中断，点右上角“音”重试');$('sound').textContent='音';$('sound').setAttribute('aria-label','开启音乐或重试加载');$('sound').setAttribute('aria-pressed','false');});
 function activateFades(){
- try{if(!fadeContext){const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;fadeContext=new AudioCtx();const source=fadeContext.createMediaElementSource(music);fadeGain=fadeContext.createGain();source.connect(fadeGain);fadeGain.connect(fadeContext.destination);music.volume=1;}fadeContext.resume().catch(()=>{});}catch{fadeContext=null;fadeGain=null;}
+ try{if(!fadeContext){const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;fadeContext=new AudioCtx();const source=fadeContext.createMediaElementSource(music);fadeGain=fadeContext.createGain();source.connect(fadeGain);fadeGain.connect(fadeContext.destination);music.volume=1;}fadeContext.resume().catch(()=>playback.requireGesture());}catch{fadeContext=null;fadeGain=null;}
 }
 const show=(id,on)=>{$(id).hidden=!on;};
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');toastUntil=performance.now()+2600;}
@@ -67,11 +69,11 @@ loadAssets();
 wireWelcome('zh',()=>{game.enter('prologue');loadIntroAssets();sync();$('story-title').focus({preventScroll:true});});
 if(game.phase==='prologue')loadIntroAssets();
 if(document.fonts)document.fonts.load('600 21px GameCJK').catch(()=>{});
-function stopMusic(){music.pause();playPending=false;}
+function stopMusic(){playback.stop();}
 function scheduleMusic(){
  const track=['grow','prayer','cosmos'].includes(game.phase)?'meditation':(['charge','play','burn'].includes(game.phase)||queuedStart||storySound&&game.phase==='prologue')?'adventure':null;
  if(muted||game.paused||sceneWaiting||!track){stopMusic();return;}
- if(musicTrack!==track){stopMusic();musicTrack=track;music.src=track==='meditation'?meditation.src:AUDIO.adventure;music.loop=track==='adventure';music.currentTime=0;audioBlocked=false;}
+ if(musicTrack!==track){stopMusic();musicTrack=track;music.src=track==='meditation'?meditation.src:AUDIO.adventure;music.loop=track==='adventure';music.currentTime=0;playback.reset(true);}
  // Ease volume at scene boundaries rather than cutting an audible track.
  let envelope=1;
  if(game.phase==='burn')envelope=Math.max(0,Math.min(1,(7-game.phaseTime)/2));
@@ -81,19 +83,16 @@ function scheduleMusic(){
  if(game.phase==='cosmos'&&meditation.fadeOut>0){const remaining=Number.isFinite(music.duration)?music.duration-music.currentTime:game.meditationDuration-21-game.phaseTime;envelope=Math.max(0,Math.min(1,remaining/meditation.fadeOut));}
  const volume=.8*(.5-.5*Math.cos(Math.PI*envelope));
  if(fadeGain)fadeGain.gain.setTargetAtTime(volume,fadeContext.currentTime,.025);else music.volume=volume;
- if(!music.paused||playPending||audioBlocked||(musicTrack==='meditation'&&music.ended))return;
- playPending=true;
- const attempt=music.play();
- if(attempt&&attempt.then)attempt.then(()=>{playPending=false;}).catch(()=>{playPending=false;audioBlocked=true;toast('点右上角“音”开启音乐');$('sound').textContent='音';$('sound').setAttribute('aria-label','点击开启音乐');});else playPending=false;
+ if(!(musicTrack==='meditation'&&music.ended))playback.play();
 }
 function hitSound(){}
 function updateSound(){$('sound').setAttribute('aria-pressed',String(!muted));$('sound').setAttribute('aria-label',muted?'开启音乐':'关闭音乐');$('sound').textContent=muted?'音':'♫';}
-function begin(){activateFades();if(!loaded){if(!queuedStart)welcomeStartedAt=performance.now();queuedStart=true;muted=false;audioBlocked=false;updateSound();scheduleMusic();$('start').disabled=true;$('story-play').disabled=true;loadAssets();return;}const warmStart=queuedStart||storySound;queuedStart=false;storySound=false;if(!warmStart){welcomeStartedAt=0;stopMusic();musicTrack=null;}game.start();loadDeferredAssets();$('easy').textContent='轻松模式';$('easy').setAttribute('aria-pressed','false');muted=false;audioBlocked=false;updateSound();scheduleMusic();sync();}
+function begin(){activateFades();if(!loaded){if(!queuedStart)welcomeStartedAt=performance.now();queuedStart=true;muted=false;playback.reset();updateSound();scheduleMusic();$('start').disabled=true;$('story-play').disabled=true;loadAssets();return;}const warmStart=queuedStart||storySound;queuedStart=false;storySound=false;if(!warmStart){welcomeStartedAt=0;stopMusic();musicTrack=null;}game.start();loadDeferredAssets();$('easy').textContent='轻松模式';$('easy').setAttribute('aria-pressed','false');muted=false;playback.reset();updateSound();scheduleMusic();sync();}
 $('start').onclick=begin;$('replay').onclick=begin;
 $('story-play').onclick=begin;
 $('story-next').onclick=()=>{if(!storyComplete){storyComplete=true;$('story-copy').textContent=story[storyIndex][1];}else if(storyIndex===story.length-1){begin();}else{storyIndex++;storyClock=0;storyComplete=false;}};
-$('story-sound').onclick=()=>{activateFades();if(!welcomeStartedAt)welcomeStartedAt=performance.now();storySound=true;muted=false;audioBlocked=false;updateSound();scheduleMusic();};
-$('sound').onclick=()=>{activateFades();if(game.phase==='prologue')storySound=true;if(audioBlocked){audioBlocked=false;muted=false;}else muted=!muted;updateSound();if(muted)stopMusic();else scheduleMusic();};
+$('story-sound').onclick=()=>{activateFades();if(!welcomeStartedAt)welcomeStartedAt=performance.now();storySound=true;muted=false;playback.reset();updateSound();scheduleMusic();};
+$('sound').onclick=()=>{activateFades();if(game.phase==='prologue')storySound=true;if(playback.recovering||(!muted&&music.paused)||(fadeContext&&fadeContext.state!=='running'))muted=false;else muted=!muted;if(!muted)playback.reset();updateSound();if(muted)stopMusic();else scheduleMusic();};
 $('skip').onclick=()=>{if(game.phase==='charge')game.enter('play');};
 function pause(on,automatic=false){if(['home','welcome','prologue','done'].includes(game.phase))return;game.paused=on;game.aim=null;game.recharge=false;autoPaused=automatic;show('pausepanel',on);$('pause').textContent=on?'▶':'Ⅱ';$('pause').setAttribute('aria-label',on?'继续游戏':'暂停游戏');if(on)stopMusic();else{last=0;scheduleMusic();}}
 $('pause').onclick=()=>pause(!game.paused);$('resume').onclick=()=>{activateFades();pause(false);};
@@ -140,6 +139,6 @@ function updateStory(dt){
  if(count===copy.length)storyComplete=true;$('story-next').textContent=storyIndex===story.length-1?'进入游戏 →':'继续读 →';
  if(storyIndex<story.length-1&&storyClock>copy.length/speed+5){storyIndex++;storyClock=0;storyComplete=false;}
 }
-function frame(now){if(!last)last=now;const dt=Math.min(.05,(now-last)/1000);last=now;updateStory(dt);if(musicTrack==='meditation'&&Number.isFinite(music.duration)&&music.duration>0)game.meditationDuration=music.duration;game.meditationAudioActive=musicTrack==='meditation'&&Number.isFinite(music.duration)&&!muted&&!audioBlocked&&!music.paused&&!music.ended&&!music.error;if(!waitForSceneAssets())game.advance(dt);sync();drawScene(ctx,game,assets);scheduleMusic();if(toastUntil&&now>toastUntil){$('toast').classList.remove('show');toastUntil=0;}requestAnimationFrame(frame);}
+function frame(now){if(!last)last=now;const dt=Math.min(.05,(now-last)/1000);last=now;updateStory(dt);if(musicTrack==='meditation'&&Number.isFinite(music.duration)&&music.duration>0)game.meditationDuration=music.duration;game.meditationAudioActive=musicTrack==='meditation'&&Number.isFinite(music.duration)&&!muted&&!playback.blocked&&!music.paused&&!music.ended&&!music.error;if(!waitForSceneAssets())game.advance(dt);sync();drawScene(ctx,game,assets);scheduleMusic();if(toastUntil&&now>toastUntil){$('toast').classList.remove('show');toastUntil=0;}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 window.addEventListener('pagehide',stopMusic);
